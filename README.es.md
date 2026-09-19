@@ -5,6 +5,12 @@
 <h1 align="center">CAD AI</h1>
 
 <p align="center">
+  <a href="https://github.com/Evo1148/CAD-AI/actions/workflows/ci.yml">
+    <img src="https://github.com/Evo1148/CAD-AI/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+</p>
+
+<p align="center">
   Un sistema local-first para transformar requisitos en lenguaje natural en
   <strong>CAD paramétrico validado</strong> mediante grounding determinista,
   planificación estructurada y reparación automática controlada.
