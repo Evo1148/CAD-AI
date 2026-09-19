@@ -20,11 +20,24 @@
 
 CAD AI explores a simple idea: an LLM can help interpret design intent, but it should **not** be the authority that directly creates or approves geometry.
 
-Instead, the system separates interpretation from execution.
+The system therefore separates interpretation, authorization, execution and validation.
 
-Natural-language requirements are converted into structured facts, passed through deterministic gates, transformed into a formal design specification and CAD plan, executed by a parametric CAD engine, and then checked by an independent validator. If validation fails, a constrained repair loop can propose a correction without giving the LLM unrestricted control over geometry.
+Natural-language requirements are converted into structured facts, passed through deterministic gates, transformed into a formal design specification and CAD plan, executed by a parametric CAD engine, and checked by an independent validator. If validation fails, a constrained repair loop can propose a correction without giving the LLM unrestricted control over geometry.
 
-> **Status:** active development. The current prototype architecture is functional and covered by automated tests and benchmark cases. The source repository is being prepared for a clean public import.
+> **Status:** active development. The public source currently includes **CAD AI V0.2**, Capability Packs 1–3, the Prototype Usability Gate, LAB-001, benchmark tooling and the automated test suite.
+
+## Source
+
+- 🧠 [Core package](./src/cad_ai/)
+- 🧪 [Tests](./tests/)
+- 📐 [V0.2 capability layer](./src/cad_ai/capability_v02.py)
+- 🧭 [Prompt grounding](./src/cad_ai/prompt_grounding.py)
+- 🚪 [Prototype usability gate](./src/cad_ai/prototype_gate.py)
+- 🔬 [LAB runner](./src/cad_ai/lab.py)
+- 📊 [Benchmark tooling](./src/cad_ai/benchmark/)
+- 🏗️ [Architecture](./docs/architecture.md)
+- 🧱 [Engineering principles](./docs/principles.md)
+- 📜 [Development history](./docs/development-history.es.md)
 
 ## Core pipeline
 
@@ -51,7 +64,7 @@ ExtractionCoverage
     │                  FactGroundingValidator
     │
     └── INSUFFICIENT ─────► Structured error / no CAD
-                               
+
 Canonical Extracted Facts
     │
     ▼
@@ -92,8 +105,6 @@ A more detailed description is available in [docs/architecture.md](./docs/archit
 
 ## Design principles
 
-CAD AI is built around a few strict rules:
-
 - **The LLM proposes and interprets; it never executes geometry directly.**
 - **Deterministic evidence has priority over model output.**
 - Grounded facts cannot be overwritten by residual LLM extraction.
@@ -107,35 +118,34 @@ CAD AI is built around a few strict rules:
 
 See [docs/principles.md](./docs/principles.md).
 
-## Current capabilities
+## Current public capability surface
 
-The current prototype focuses on parametric part generation and controlled feature editing.
+The current V0.2 source extends the original plate vertical slice through three capability packs.
 
-Implemented or validated areas include:
+**Capability Pack 1** adds explicit through holes, linear hole patterns, fillets and chamfers.
 
-- deterministic prompt grounding;
-- complete / partial / insufficient extraction coverage;
-- residual LLM extraction for unresolved facts;
-- canonical fact assembly and grounding validation;
-- deterministic intent gating;
-- formal `DesignSpec` and `CADPlan`;
-- CAD generation with CadQuery / OpenCascade;
-- independent validation;
-- deterministic repair execution;
-- constrained LLM-assisted repair planning;
-- structured output;
-- local-LLM inference experiments;
-- regression tests and benchmark suites;
-- STEP / STL generation.
+**Capability Pack 2** adds rectangular/circular pockets, through cutouts and straight slots while preserving the same deterministic authorization boundary.
+
+**Capability Pack 3** adds controlled additive features on the top support face, including rectangular bosses, cylindrical bosses, standoffs and linear patterns.
+
+The public repository also includes:
+
+- deterministic and hybrid extraction paths;
+- controlled local-LLM integration;
+- formal `DesignSpec` / `CADPlan` contracts;
+- CadQuery / OpenCascade execution;
+- independent geometry validation;
+- constrained repair planning and execution;
+- Prototype Usability Gate evaluation;
+- LAB-001 real repair case;
+- regression tests and benchmark tooling.
 
 ## Example repair flow
-
-A generated revision can fail a dimensional constraint without invalidating the entire design.
 
 ```text
 R01
  └─ Validator
-      └─ FAIL: hole diameter outside tolerance
+      └─ FAIL: dimensional constraint outside tolerance
              │
              ▼
        Repair context
@@ -144,8 +154,7 @@ R01
        Repair planner
              │
              ▼
-       SET_PARAMETER
-       target: hole diameter
+       RepairPlan
              │
              ▼
        RepairPlanValidator
@@ -166,8 +175,9 @@ The repair path is deliberately local: unrelated parameters and constraints must
 
 | Area | Technologies |
 | --- | --- |
-| Language | Python |
+| Language | Python 3.11–3.12 |
 | CAD | CadQuery · OpenCascade |
+| Contracts | Pydantic |
 | AI | Local LLMs · structured output · JSON Schema |
 | Inference experiments | llama.cpp · Vulkan |
 | Validation | Deterministic geometry / constraint checks |
@@ -176,48 +186,62 @@ The repair path is deliberately local: unrelated parameters and constraints must
 
 ## Repository layout
 
-The public repository is being prepared around this structure:
-
 ```text
 CAD-AI/
-├── src/             # Core package
-├── tests/           # Unit and regression tests
-├── benchmarks/      # Reproducible evaluation cases
-├── examples/        # Small usage examples
-├── docs/            # Architecture and design documentation
-├── assets/          # Diagrams and screenshots
+├── src/
+│   └── cad_ai/
+│       ├── benchmark/
+│       ├── capability_v02.py
+│       ├── prompt_grounding.py
+│       ├── prototype_gate.py
+│       ├── lab.py
+│       ├── planning.py
+│       ├── generation.py
+│       ├── validation.py
+│       └── ...
+├── tests/
+├── docs/
+├── assets/
+├── tools/
 ├── pyproject.toml
+├── uv.lock
 ├── README.md
 └── README.es.md
 ```
 
-The source tree will be imported only after generated files, local model artifacts, test outputs and machine-specific configuration have been reviewed.
+Generated CAD outputs, local model weights, virtual environments and benchmark run artifacts are intentionally excluded from version control.
+
+## Installation
+
+```bash
+python -m venv .venv
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+python -m pip install -e ".[test]"
+```
+
+Run the test suite:
+
+```powershell
+pytest
+```
+
+CadQuery brings OpenCascade through its OCP stack. On platforms where its wheels do not resolve cleanly, a compatible Conda environment may be preferable.
 
 ## Evaluation philosophy
 
-The project distinguishes between:
-
-- **unit tests** — correctness of individual components;
-- **CAD benchmarks** — whether geometry matches expected requirements;
-- **repair benchmarks** — whether failures are corrected safely;
-- **regression tests** — whether fixed failures stay fixed;
-- **model benchmarks** — whether different models/prompts produce valid structured proposals under identical conditions.
+The project distinguishes between unit tests, CAD benchmarks, repair benchmarks, regression tests and model benchmarks.
 
 Useful metrics include validation pass rate, repair success rate, first-pass success, average revisions, constraint preservation, change locality, determinism, latency and resource use.
 
 ## Why local-first?
 
-The architecture is intentionally model-agnostic.
-
-Local models are useful for:
-
-- privacy;
-- reproducibility;
-- offline experimentation;
-- stable benchmark conditions;
-- avoiding dependence on a single provider.
-
-The system can still support remote models, but no model is treated as a source of geometric truth.
+The architecture is deliberately model-agnostic. Local models provide privacy, reproducibility, offline experimentation and stable benchmark conditions. Remote models can also be supported, but no model is treated as a source of geometric truth.
 
 ## License
 
