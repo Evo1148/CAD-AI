@@ -32,6 +32,35 @@ Los requisitos en lenguaje natural se convierten en hechos estructurados, pasan 
 
 > **Estado:** desarrollo activo. El código público incluye actualmente **CAD AI V0.2**, Capability Packs 1–3, Prototype Usability Gate, LAB-001, tooling de benchmark y la suite automatizada de tests.
 
+## Arquitectura de un vistazo
+
+```mermaid
+flowchart TD
+    A[User Prompt] --> B[DeterministicPromptGrounder]
+    B --> C{ExtractionCoverage}
+
+    C -->|COMPLETE| D[DeterministicFactAssembler]
+    C -->|PARTIAL| E[ResidualLLMExtractor]
+    E --> F[ResidualFacts]
+    F --> D
+    C -->|INSUFFICIENT| X[Error estructurado / no CAD]
+
+    D --> G[FactGroundingValidator<br/>en camino híbrido]
+    G --> H[Deterministic Intent Gate]
+    H --> I[DesignSpec]
+    I --> J[CADPlan]
+    J --> K[CAD Engine]
+    K --> L{Validator}
+
+    L -->|PASS| M[STEP / STL]
+    L -->|FAIL| N[Repair Planner]
+    N --> O[RepairPlanValidator]
+    O --> P[Repair Executor]
+    P --> L
+```
+
+La frontera arquitectónica es deliberada: **los modelos pueden interpretar o proponer, mientras que los componentes deterministas autorizan, ejecutan y validan**.
+
 ## Código
 
 - 🧠 [Paquete principal](./src/cad_ai/)
