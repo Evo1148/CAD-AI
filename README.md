@@ -32,6 +32,35 @@ Natural-language requirements are converted into structured facts, passed throug
 
 > **Status:** active development. The public source currently includes **CAD AI V0.2**, Capability Packs 1–3, the Prototype Usability Gate, LAB-001, benchmark tooling and the automated test suite.
 
+## Architecture at a glance
+
+```mermaid
+flowchart TD
+    A[User Prompt] --> B[DeterministicPromptGrounder]
+    B --> C{ExtractionCoverage}
+
+    C -->|COMPLETE| D[DeterministicFactAssembler]
+    C -->|PARTIAL| E[ResidualLLMExtractor]
+    E --> F[ResidualFacts]
+    F --> D
+    C -->|INSUFFICIENT| X[Structured error / no CAD]
+
+    D --> G[FactGroundingValidator<br/>when hybrid]
+    G --> H[Deterministic Intent Gate]
+    H --> I[DesignSpec]
+    I --> J[CADPlan]
+    J --> K[CAD Engine]
+    K --> L{Validator}
+
+    L -->|PASS| M[STEP / STL]
+    L -->|FAIL| N[Repair Planner]
+    N --> O[RepairPlanValidator]
+    O --> P[Repair Executor]
+    P --> L
+```
+
+The key architectural boundary is intentional: **models may interpret or propose, while deterministic components authorize, execute and validate**.
+
 ## Source
 
 - 🧠 [Core package](./src/cad_ai/)
