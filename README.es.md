@@ -20,11 +20,24 @@
 
 CAD AI explora una idea sencilla: un LLM puede ayudar a interpretar la intención de diseño, pero **no debe ser la autoridad que crea o aprueba directamente la geometría**.
 
-El sistema separa interpretación y ejecución.
+Por eso el sistema separa interpretación, autorización, ejecución y validación.
 
-Los requisitos en lenguaje natural se convierten en hechos estructurados, pasan por gates deterministas, se transforman en una especificación formal y un plan CAD, se ejecutan mediante un motor paramétrico y finalmente son comprobados por un validador independiente. Si la validación falla, un bucle de reparación restringido puede proponer una corrección sin entregar al LLM control libre sobre la geometría.
+Los requisitos en lenguaje natural se convierten en hechos estructurados, pasan por gates deterministas, se transforman en una especificación formal y un plan CAD, se ejecutan mediante un motor paramétrico y son comprobados por un validador independiente. Si la validación falla, un bucle de reparación restringido puede proponer una corrección sin entregar al LLM control libre sobre la geometría.
 
-> **Estado:** desarrollo activo. La arquitectura actual del prototipo es funcional y está cubierta por tests automatizados y casos de benchmark. El repositorio público se está preparando para una importación limpia del código.
+> **Estado:** desarrollo activo. El código público incluye actualmente **CAD AI V0.2**, Capability Packs 1–3, Prototype Usability Gate, LAB-001, tooling de benchmark y la suite automatizada de tests.
+
+## Código
+
+- 🧠 [Paquete principal](./src/cad_ai/)
+- 🧪 [Tests](./tests/)
+- 📐 [Capability layer V0.2](./src/cad_ai/capability_v02.py)
+- 🧭 [Prompt grounding](./src/cad_ai/prompt_grounding.py)
+- 🚪 [Prototype Usability Gate](./src/cad_ai/prototype_gate.py)
+- 🔬 [LAB runner](./src/cad_ai/lab.py)
+- 📊 [Benchmark tooling](./src/cad_ai/benchmark/)
+- 🏗️ [Arquitectura](./docs/architecture.md)
+- 🧱 [Principios de ingeniería](./docs/principles.md)
+- 📜 [Historial de desarrollo](./docs/development-history.es.md)
 
 ## Pipeline principal
 
@@ -92,8 +105,6 @@ Hay una descripción más detallada en [docs/architecture.md](./docs/architectur
 
 ## Principios de diseño
 
-CAD AI se apoya en reglas estrictas:
-
 - **El LLM propone e interpreta; nunca ejecuta geometría directamente.**
 - **La evidencia determinista tiene prioridad sobre la salida del modelo.**
 - Los facts grounded no pueden ser sobrescritos por la extracción residual del LLM.
@@ -107,35 +118,34 @@ CAD AI se apoya en reglas estrictas:
 
 Consulta [docs/principles.md](./docs/principles.md).
 
-## Capacidades actuales
+## Superficie pública actual
 
-El prototipo actual se centra en generación paramétrica de piezas y modificación controlada de features.
+El código V0.2 amplía el vertical slice original mediante tres capability packs.
 
-Áreas implementadas o validadas:
+**Capability Pack 1** añade agujeros through explícitos, patrones lineales de agujeros, fillets y chamfers.
 
-- grounding determinista del prompt;
-- cobertura de extracción complete / partial / insufficient;
-- extracción residual mediante LLM para hechos no resueltos;
-- ensamblado canónico y validación de grounding;
-- intent gating determinista;
-- `DesignSpec` y `CADPlan` formales;
-- generación CAD con CadQuery / OpenCascade;
-- validación independiente;
-- ejecución determinista de reparaciones;
-- planificación de reparación asistida por LLM pero restringida;
-- structured output;
-- experimentos de inferencia con LLMs locales;
-- tests de regresión y suites de benchmark;
-- generación STEP / STL.
+**Capability Pack 2** añade pockets rectangulares/circulares, cutouts through y slots rectos manteniendo la misma frontera determinista de autorización.
+
+**Capability Pack 3** añade features aditivas controladas sobre la cara superior, incluyendo bosses rectangulares, bosses cilíndricos, standoffs y patrones lineales.
+
+El repositorio público incluye además:
+
+- caminos de extracción determinista e híbrida;
+- integración controlada con LLMs locales;
+- contratos formales `DesignSpec` / `CADPlan`;
+- ejecución mediante CadQuery / OpenCascade;
+- validación geométrica independiente;
+- planificación y ejecución restringida de reparaciones;
+- Prototype Usability Gate;
+- caso real LAB-001;
+- tests de regresión y tooling de benchmark.
 
 ## Ejemplo de reparación
-
-Una revisión puede fallar una restricción dimensional sin invalidar el diseño completo.
 
 ```text
 R01
  └─ Validator
-      └─ FAIL: diámetro del agujero fuera de tolerancia
+      └─ FAIL: constraint dimensional fuera de tolerancia
              │
              ▼
        Repair context
@@ -144,8 +154,7 @@ R01
        Repair planner
              │
              ▼
-       SET_PARAMETER
-       target: diámetro
+       RepairPlan
              │
              ▼
        RepairPlanValidator
@@ -166,8 +175,9 @@ La reparación debe ser local: parámetros y restricciones no relacionados deben
 
 | Área | Tecnologías |
 | --- | --- |
-| Lenguaje | Python |
+| Lenguaje | Python 3.11–3.12 |
 | CAD | CadQuery · OpenCascade |
+| Contratos | Pydantic |
 | IA | LLMs locales · structured output · JSON Schema |
 | Experimentos de inferencia | llama.cpp · Vulkan |
 | Validación | Checks deterministas de geometría / constraints |
@@ -176,48 +186,57 @@ La reparación debe ser local: parámetros y restricciones no relacionados deben
 
 ## Estructura del repositorio
 
-El repositorio público se está preparando alrededor de esta estructura:
-
 ```text
 CAD-AI/
-├── src/             # Paquete principal
-├── tests/           # Tests unitarios y de regresión
-├── benchmarks/      # Casos de evaluación reproducibles
-├── examples/        # Ejemplos pequeños de uso
-├── docs/            # Arquitectura y documentación de diseño
-├── assets/          # Diagramas y capturas
+├── src/
+│   └── cad_ai/
+│       ├── benchmark/
+│       ├── capability_v02.py
+│       ├── prompt_grounding.py
+│       ├── prototype_gate.py
+│       ├── lab.py
+│       ├── planning.py
+│       ├── generation.py
+│       ├── validation.py
+│       └── ...
+├── tests/
+├── docs/
+├── assets/
+├── tools/
 ├── pyproject.toml
+├── uv.lock
 ├── README.md
 └── README.es.md
 ```
 
-El código se importará solo después de revisar outputs generados, artefactos de modelos locales, resultados de tests y configuración específica de la máquina.
+Los outputs CAD generados, pesos de modelos locales, entornos virtuales y resultados de ejecución de benchmarks se excluyen deliberadamente del control de versiones.
+
+## Instalación
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+python -m pip install -e ".[test]"
+```
+
+Ejecutar la suite de tests:
+
+```powershell
+pytest
+```
+
+CadQuery instala OpenCascade mediante su stack OCP. En plataformas donde sus wheels no se resuelvan correctamente puede ser preferible utilizar un entorno Conda compatible.
 
 ## Filosofía de evaluación
 
-El proyecto distingue entre:
-
-- **unit tests** — corrección de componentes individuales;
-- **CAD benchmarks** — si la geometría cumple los requisitos esperados;
-- **repair benchmarks** — si los fallos se corrigen de forma segura;
-- **regression tests** — si los fallos corregidos permanecen corregidos;
-- **model benchmarks** — si distintos modelos/prompts producen propuestas estructuradas válidas bajo condiciones idénticas.
+El proyecto distingue entre unit tests, CAD benchmarks, repair benchmarks, regression tests y model benchmarks.
 
 Las métricas útiles incluyen validation pass rate, repair success rate, first-pass success, average revisions, constraint preservation, change locality, determinismo, latencia y uso de recursos.
 
 ## ¿Por qué local-first?
 
-La arquitectura es deliberadamente model-agnostic.
-
-Los modelos locales aportan:
-
-- privacidad;
-- reproducibilidad;
-- experimentación offline;
-- condiciones estables de benchmark;
-- independencia de un único proveedor.
-
-El sistema puede soportar también modelos remotos, pero ningún modelo se considera fuente de verdad geométrica.
+La arquitectura es deliberadamente model-agnostic. Los modelos locales aportan privacidad, reproducibilidad, experimentación offline y condiciones estables de benchmark. También pueden soportarse modelos remotos, pero ningún modelo se considera fuente de verdad geométrica.
 
 ## Licencia
 
